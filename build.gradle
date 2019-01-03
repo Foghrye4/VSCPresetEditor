@@ -1,0 +1,56 @@
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'eclipse'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
+dependencies {
+    compile 'com.google.code.gson:gson:2.8.5'
+}
+
+jar {
+    baseName = "$jarname"
+}
+
+mainClassName = "vertical_spawn_control_client.Main"
+
+//create a single Jar with all dependencies
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Main-Class': mainClassName
+    }
+    baseName = "$jarname"
+    archiveName = "${jarname}-${version}.jar"
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+
+task dist(type: Zip, dependsOn: fatJar) {
+    from("${buildDir}/libs") {
+        include "${jarname}-${version}.jar"
+    }
+    from("${projectDir}") {
+        include 'LICENSE'
+        include 'README.md'
+    }
+    from ("${projectDir}/Licenses") {
+        include "**/*"
+        into "Licenses"
+    }
+    from ("${projectDir}/docs") {
+        include "**/*"
+        into "docs"
+    }
+    destinationDir = file("${buildDir}/dist")
+    baseName = "${jarname}"
+}
