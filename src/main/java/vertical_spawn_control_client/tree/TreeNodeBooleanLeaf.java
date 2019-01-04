@@ -8,12 +8,15 @@ import java.util.function.Function;
 import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
 import javax.swing.JLayeredPane;
-import javax.swing.JTextField;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.tree.TreeNode;
 
+import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.minecraft.PresetParser;
 
 public class TreeNodeBooleanLeaf extends TreeLeafBase {
 	
@@ -33,6 +36,7 @@ public class TreeNodeBooleanLeaf extends TreeLeafBase {
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				value = inputField.isSelected();
+				PresetParser.get().tree.updateUI();
 			}});
 	}
 
@@ -63,6 +67,12 @@ public class TreeNodeBooleanLeaf extends TreeLeafBase {
 		writer.name(name);
 		writer.value(value);
 	}
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		if (reader.nextName().equals(name))
+			value = reader.nextBoolean();
+	}
 
 	public void setValue(boolean valueIn) {
 		value = valueIn;
@@ -78,11 +88,15 @@ public class TreeNodeBooleanLeaf extends TreeLeafBase {
 		};
 	}
 
-
 	@Override
 	public void parseValue(String string) {
 		if(string == null)
 			return;
 		value = Boolean.parseBoolean(string);
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.NAME_VALUE_PAIR;
 	}
 }

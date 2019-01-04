@@ -7,7 +7,7 @@ import javax.swing.tree.TreeNode;
 
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public abstract class TreeLeafBase implements TreeNode, UIComponentsProvider, JsonSerializable {
+public abstract class TreeLeafBase implements JsonSerializableTreeNode, UIComponentsProvider {
 	public final TreeNode parent;
 	public final String name;
 

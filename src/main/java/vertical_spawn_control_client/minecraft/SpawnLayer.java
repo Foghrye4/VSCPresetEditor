@@ -1,40 +1,35 @@
 package vertical_spawn_control_client.minecraft;
 
-import java.awt.Color;
 import java.awt.Rectangle;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.Vector;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLayeredPane;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
-import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.tree.JsonSerializable;
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.tree.TreeNodeBooleanLeaf;
 import vertical_spawn_control_client.tree.TreeNodeCollection;
 import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
 import vertical_spawn_control_client.tree.TreeNodeMutablePrimitiveStringLeaf;
 import vertical_spawn_control_client.tree.TreeNodeStringLeaf;
+import vertical_spawn_control_client.tree.TreeNodeValueHolder;
+import vertical_spawn_control_client.ui.JTreeNodeTextField;
+import vertical_spawn_control_client.ui.MainWindow;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class SpawnLayer implements TreeNode, JsonSerializable, UIComponentsProvider {
+public class SpawnLayer implements JsonSerializableTreeNode, UIComponentsProvider, TreeNodeValueHolder {
 	
 	private final Vector<TreeNode> childs = new Vector<TreeNode>();
-	private String name = "";
+	private String name = "New area";
 	private final TreeNodeStringLeaf comment = new TreeNodeStringLeaf(this, "Comment", "");
 	private final TreeNodeIntegerLeaf fromX = new TreeNodeIntegerLeaf(this, "fromX", -100000);
 	private final TreeNodeIntegerLeaf toX = new TreeNodeIntegerLeaf(this, "toX", 100000);
@@ -43,42 +38,40 @@ public class SpawnLayer implements TreeNode, JsonSerializable, UIComponentsProvi
 	private final TreeNodeIntegerLeaf fromZ = new TreeNodeIntegerLeaf(this, "fromZ", -100000);
 	private final TreeNodeIntegerLeaf toZ = new TreeNodeIntegerLeaf(this, "toZ", 100000);
 	private final TreeNodeBooleanLeaf blockNaturalSpawn = new TreeNodeBooleanLeaf(this,"block_natural_spawn", true);
-	public final TreeNodeCollection<EntitySpawnDefinition> spawnList = new TreeNodeCollection<EntitySpawnDefinition>(this,"spawn_list");
-	public final TreeNodeCollection<TreeNode> blackList = new TreeNodeCollection<TreeNode>(this,"black_list"); // entity registry name list, for example "minecraft:zombie"
-	public final TreeNodeCollection<TreeNode> biomeBlackList = new TreeNodeCollection<TreeNode>(this,"exclude_biomes"); // Biome registry name set, for example "minecraft:taiga"
-	public final TreeNodeCollection<TreeNode> biomeWhiteList = new TreeNodeCollection<TreeNode>(this,"only_in_biomes");
+	public final TreeNodeCollection<EntitySpawnDefinition> spawnList = new TreeNodeCollection<EntitySpawnDefinition>(this,"spawn_list",()-> {
+		return new EntitySpawnDefinition(SpawnLayer.this.spawnList);
+	});
+	public final TreeNodeCollection<JsonSerializableTreeNode> blackList = new TreeNodeCollection<JsonSerializableTreeNode>(this,"black_list",()-> {
+		return new TreeNodeMutablePrimitiveStringLeaf(SpawnLayer.this.blackList,"minecraft:zombie");
+	}); // entity registry name list, for example "minecraft:zombie"
+	public final TreeNodeCollection<JsonSerializableTreeNode> biomeBlackList = new TreeNodeCollection<JsonSerializableTreeNode>(this,"exclude_biomes", ()-> {
+		return new TreeNodeMutablePrimitiveStringLeaf(SpawnLayer.this.biomeBlackList, "minecraft:taiga");
+	}); // Biome registry name set, for example "minecraft:taiga"
+	public final TreeNodeCollection<JsonSerializableTreeNode> biomeWhiteList = new TreeNodeCollection<JsonSerializableTreeNode>(this,"only_in_biomes", ()-> {
+		return new TreeNodeMutablePrimitiveStringLeaf(SpawnLayer.this.biomeWhiteList, "minecraft:taiga");
+	});
 	private final PresetParser parent;
-	private final JTextField inputField = new JTextField();
+	JTextField inputField = new JTreeNodeTextField(this);
 	private final JButton removeButton = new JButton("Remove");
 	
 	public SpawnLayer(PresetParser parentIn) {
 		parent = parentIn;
-		inputField.setBorder(BorderFactory.createLineBorder(Color.black));
 		inputField.setText(name);
-		inputField.addKeyListener(new KeyListener() {
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-			}
-
-			@Override
-			public void keyReleased(KeyEvent e) {
-				name = inputField.getText();
-			}
-		});
 		removeButton.addActionListener(a -> {
 			parent.remove(SpawnLayer.this);
-			removeButton.getParent().remove(removeButton);
-			parent.tree.updateUI();
 		});
 		this.collectNodes();
 	}
 	
 	public SpawnLayer(PresetParser parentIn, JsonReader reader) throws IOException {
 		this(parentIn);
+		this.readFromJson(reader);
+	}
+	
+
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		boolean setDefaultName = true;
 		reader.beginObject();
 		while (reader.hasNext()) {
 			String name = reader.nextName();
@@ -95,8 +88,9 @@ public class SpawnLayer implements TreeNode, JsonSerializable, UIComponentsProvi
 			} else if (name.equals("toZ")) {
 				toZ.setValue(reader.nextInt());
 			} else if (name.equals("name")) {
-				name = reader.nextString();
-				inputField.setText(name);
+				setDefaultName = false;
+				this.name = reader.nextString();
+				inputField.setText(this.name);
 			} else if (name.equalsIgnoreCase("comment")) {
 				comment.setValue(reader.nextString());
 			} else if (name.equals("exclude_biomes")) {
@@ -149,10 +143,14 @@ public class SpawnLayer implements TreeNode, JsonSerializable, UIComponentsProvi
 			fromZ.setValue(toZ.getValue());
 			toZ.setValue(a);
 		}
-		if(name.isEmpty()) {
-			name = "Layer from Y="+fromY.getValue()+" to Y="+toY.getValue();
-			inputField.setText(name);
-		}
+		if(setDefaultName)
+			setDefaultName();
+	}
+
+	
+	private void setDefaultName() {
+		name = "Layer from Y="+fromY.getValue()+" to Y="+toY.getValue();
+		inputField.setText(name);
 	}
 	
 	private void collectNodes() {
@@ -168,25 +166,16 @@ public class SpawnLayer implements TreeNode, JsonSerializable, UIComponentsProvi
 		childs.addElement(this.biomeBlackList);
 		childs.addElement(this.biomeWhiteList);
 		childs.addElement(this.blackList);
-		this.spawnList.addNodeSupplier("<add new>", ()-> {
-			return new EntitySpawnDefinition(spawnList);
-		});
-		this.blackList.addNodeSupplier("<add new>", ()-> {
-			return new TreeNodeMutablePrimitiveStringLeaf(blackList,"minecraft:zombie");
-		});
-		this.biomeBlackList.addNodeSupplier("<add new>", ()-> {
-			return new TreeNodeMutablePrimitiveStringLeaf(biomeBlackList, "minecraft:taiga");
-		});
-		this.biomeWhiteList.addNodeSupplier("<add new>", ()-> {
-			return new TreeNodeMutablePrimitiveStringLeaf(biomeWhiteList, "minecraft:taiga");
-		});
 	}
 	
+	@Override
 	public void writeTo(JsonWriter writer) throws IOException {
 		writer.beginObject();
+		writer.name("name");
+		writer.value(name);
 		for(TreeNode node:childs) {
-			if (node instanceof JsonSerializable) {
-				((JsonSerializable)node).writeTo(writer);
+			if (node instanceof JsonSerializableTreeNode) {
+				((JsonSerializableTreeNode)node).writeTo(writer);
 			}
 		}
 		writer.endObject();
@@ -242,7 +231,7 @@ public class SpawnLayer implements TreeNode, JsonSerializable, UIComponentsProvi
 
 	@Override
 	public void addComponents(JLayeredPane panel, Rectangle rectangle) {
-		rectangle.width = 100; 
+		rectangle.width = 200; 
 		inputField.setBounds(rectangle);
 		rectangle.setLocation(rectangle.x, rectangle.y + rectangle.height);
 		removeButton.setBounds(rectangle);
@@ -251,4 +240,14 @@ public class SpawnLayer implements TreeNode, JsonSerializable, UIComponentsProvi
 		panel.getParent().repaint();
 	}
 
+	@Override
+	public boolean accept(String text) {
+		name = text;
+		return true;
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.OBJECT;
+	}
 }

@@ -45,8 +45,9 @@ public class Settings {
 		return new Settings();
 
 	}
-
-	public void toFile(File file) {
+/**
+ * @return true if file created*/
+	public boolean toFile(File file) {
 		try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
 			writer.setIndent(" ");
         	writer.beginObject();
@@ -54,8 +55,10 @@ public class Settings {
         	writer.value(recentDirectory.getAbsolutePath());
         	writer.endObject();
         	writer.close();
+        	return true;
 		} catch (IOException e) {
 			e.printStackTrace();
+        	return false;
 		}
 	}
 }

@@ -1,7 +1,5 @@
 package vertical_spawn_control_client.minecraft.ai;
 
-import javax.swing.ComboBoxModel;
-
 public enum AIModificatorAction {
 	ADD, REMOVE;
 

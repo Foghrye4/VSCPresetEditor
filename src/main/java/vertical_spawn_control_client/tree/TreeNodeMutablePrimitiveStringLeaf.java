@@ -6,9 +6,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
 import java.util.Enumeration;
-import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -17,38 +15,24 @@ import javax.swing.JTextField;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 
+import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.minecraft.EntitySpawnDefinition;
-import vertical_spawn_control_client.minecraft.NBT;
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.minecraft.PresetParser;
+import vertical_spawn_control_client.ui.JTreeNodeTextField;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class TreeNodeMutablePrimitiveStringLeaf implements TreeNode, UIComponentsProvider, JsonSerializable {
+public class TreeNodeMutablePrimitiveStringLeaf implements TreeNodeValueHolder, UIComponentsProvider, JsonSerializableTreeNode {
 
-	public final TreeNodeCollection<TreeNode> parent;
+	public final TreeNodeCollection<JsonSerializableTreeNode> parent;
 	private String value;
-	JTextField inputField;
+	JTextField inputField = new JTreeNodeTextField(this);
 	JButton removeButton = new JButton("Remove");
 
-	public TreeNodeMutablePrimitiveStringLeaf(TreeNodeCollection<TreeNode> parentIn, String valueIn) {
+	public TreeNodeMutablePrimitiveStringLeaf(TreeNodeCollection<JsonSerializableTreeNode> parentIn, String valueIn) {
 		parent = parentIn;
-		value = valueIn;
-		inputField = new JTextField();
-    	inputField.setBorder(BorderFactory.createLineBorder(Color.black));
-    	inputField.setText(value);
-    	inputField.addKeyListener(new KeyListener() {
-
-			@Override
-			public void keyTyped(KeyEvent e) {}
-
-			@Override
-			public void keyPressed(KeyEvent e) {}
-
-			@Override
-			public void keyReleased(KeyEvent e) {
-				value = inputField.getText();
-			}
-    	});
+		this.setValue(valueIn);
     	removeButton.addActionListener(a-> {
     		parent.remove(TreeNodeMutablePrimitiveStringLeaf.this);
     		inputField.getParent().remove(inputField);
@@ -66,7 +50,12 @@ public class TreeNodeMutablePrimitiveStringLeaf implements TreeNode, UIComponent
 	public void writeTo(JsonWriter writer) throws IOException {
 		writer.value(value);
 	}
-
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		value = reader.nextString();
+	}
+	
 	@Override
 	public void removeComponents(JLayeredPane panel) {
 		panel.remove(inputField);
@@ -89,10 +78,10 @@ public class TreeNodeMutablePrimitiveStringLeaf implements TreeNode, UIComponent
     	inputField.setText(value);
 	}
 	
-	public static Function<TreeNodeCollection<TreeNode>, TreeNodeMutablePrimitiveStringLeaf> getSupplier(String name, String defaultValue) {
-		return new Function<TreeNodeCollection<TreeNode>, TreeNodeMutablePrimitiveStringLeaf>() {
+	public static Function<TreeNodeCollection<JsonSerializableTreeNode>, TreeNodeMutablePrimitiveStringLeaf> getSupplier(String name, String defaultValue) {
+		return new Function<TreeNodeCollection<JsonSerializableTreeNode>, TreeNodeMutablePrimitiveStringLeaf>() {
 			@Override
-			public TreeNodeMutablePrimitiveStringLeaf apply(TreeNodeCollection<TreeNode> t) {
+			public TreeNodeMutablePrimitiveStringLeaf apply(TreeNodeCollection<JsonSerializableTreeNode> t) {
 				return new TreeNodeMutablePrimitiveStringLeaf(t, defaultValue);
 			}
 		};
@@ -131,5 +120,16 @@ public class TreeNodeMutablePrimitiveStringLeaf implements TreeNode, UIComponent
 	@Override
 	public Enumeration<TreeNode> children() {
 		return DefaultMutableTreeNode.EMPTY_ENUMERATION;
+	}
+
+	@Override
+	public boolean accept(String valueIn) {
+		value = valueIn;
+		return true;
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.PRIMITIVE;
 	}
 }

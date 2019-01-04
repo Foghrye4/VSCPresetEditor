@@ -17,21 +17,27 @@ import javax.swing.tree.TreeNode;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.tree.JsonSerializable;
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.tree.TreeNodeCollection;
 import vertical_spawn_control_client.tree.TreeNodeFloatLeaf;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class Attribute implements TreeNode, UIComponentsProvider, JsonSerializable {
+public class Attribute implements UIComponentsProvider, JsonSerializableTreeNode {
 
-	public final TreeNodeCollection<TreeNode> parent;
+	public final TreeNodeCollection<JsonSerializableTreeNode> parent;
 	private String attributeName = "generic.maxHealth";
 	TreeNodeFloatLeaf base = new TreeNodeFloatLeaf(this, "Base", 20.0f);
 	JTextField inputField = new JTextField();
 	JButton removeButton = new JButton("Remove");
 
-	public Attribute(TreeNodeCollection<TreeNode> parentIn, JsonReader reader) throws IOException {
+	public Attribute(TreeNodeCollection<JsonSerializableTreeNode> parentIn, JsonReader reader) throws IOException {
 		this(parentIn);
+		this.readFromJson(reader);
+	}
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
 		reader.beginObject();
 		while (reader.hasNext()) {
 			String name = reader.nextName();
@@ -46,7 +52,7 @@ public class Attribute implements TreeNode, UIComponentsProvider, JsonSerializab
 		reader.endObject();
 	}
 
-	public Attribute(TreeNodeCollection<TreeNode> parentIn) {
+	public Attribute(TreeNodeCollection<JsonSerializableTreeNode> parentIn) {
 		parent = parentIn;
 		inputField.setBorder(BorderFactory.createLineBorder(Color.black));
 		inputField.setText(attributeName);
@@ -62,6 +68,7 @@ public class Attribute implements TreeNode, UIComponentsProvider, JsonSerializab
 			@Override
 			public void keyReleased(KeyEvent e) {
 				attributeName = inputField.getText();
+				PresetParser.get().tree.updateUI();
 			}
 		});
 		removeButton.addActionListener(a -> {
@@ -140,5 +147,10 @@ public class Attribute implements TreeNode, UIComponentsProvider, JsonSerializab
 	@Override
 	public String toString() {
 		return this.attributeName;
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.OBJECT;
 	}
 }

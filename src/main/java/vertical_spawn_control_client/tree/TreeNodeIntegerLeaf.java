@@ -12,38 +12,23 @@ import javax.swing.JLayeredPane;
 import javax.swing.JTextField;
 import javax.swing.tree.TreeNode;
 
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
-public class TreeNodeIntegerLeaf extends TreeLeafBase {
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.minecraft.PresetParser;
+import vertical_spawn_control_client.ui.JTreeNodeTextField;
+
+public class TreeNodeIntegerLeaf extends TreeLeafBase implements TreeNodeValueHolder {
 	
 	private int value;
-	JTextField inputField;
+	JTextField inputField = new JTreeNodeTextField(this);
 	static final int MINIMAL_STRING_LENGTH = 16;
 
 	public TreeNodeIntegerLeaf(TreeNode parentIn, String nameIn, int valueIn) {
 		super(parentIn,nameIn);
-		value = valueIn;
-		inputField = new JTextField();
-    	inputField.setBorder(BorderFactory.createLineBorder(Color.black));
-    	inputField.setText(String.valueOf(value));
-    	inputField.addKeyListener(new KeyListener() {
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-			}
-
-			@Override
-			public void keyReleased(KeyEvent e) {
-				try {
-					int v = Integer.parseInt(inputField.getText());
-					value = v;
-				}
-				catch (NumberFormatException exception) {}
-			}
-    	});
+		this.setValue(valueIn);
 	}
 	
 	@Override
@@ -71,6 +56,12 @@ public class TreeNodeIntegerLeaf extends TreeLeafBase {
 		writer.name(name);
 		writer.value(value);
 	}
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		if (reader.peek() == JsonToken.NAME && reader.nextName().equals(name))
+			value = reader.nextInt();
+	}
 
 	public void setValue(int valueIn) {
 		value=valueIn;
@@ -95,5 +86,22 @@ public class TreeNodeIntegerLeaf extends TreeLeafBase {
 		if(string == null)
 			return;
 		value = Integer.parseInt(string);
+	}
+	
+	@Override
+	public boolean accept(String text) {
+		try {
+			int v = Integer.parseInt(text);
+			value = v;
+			return true;
+		}
+		catch (NumberFormatException exception) {
+			return false;
+		}
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.NAME_VALUE_PAIR;
 	}
 }

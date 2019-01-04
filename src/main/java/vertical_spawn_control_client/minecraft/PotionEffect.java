@@ -17,37 +17,26 @@ import javax.swing.tree.TreeNode;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.tree.JsonSerializable;
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.tree.TreeNodeCollection;
-import vertical_spawn_control_client.tree.TreeNodeFloatLeaf;
 import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class PotionEffect implements TreeNode, UIComponentsProvider, JsonSerializable {
+public class PotionEffect implements JsonSerializableTreeNode, UIComponentsProvider  {
 
-	public final TreeNodeCollection<TreeNode> parent;
+	public final TreeNodeCollection<JsonSerializableTreeNode> parent;
 	private int id = 8;
 	TreeNodeIntegerLeaf duration = new TreeNodeIntegerLeaf(this, "Duration", 60);
 	JTextField inputField = new JTextField();
 	JButton removeButton = new JButton("Remove");
 
-	public PotionEffect(TreeNodeCollection<TreeNode> parentIn, JsonReader reader) throws IOException {
+	public PotionEffect(TreeNodeCollection<JsonSerializableTreeNode> parentIn, JsonReader reader) throws IOException {
 		this(parentIn);
-		reader.beginObject();
-		while (reader.hasNext()) {
-			String name = reader.nextName();
-			if (name.equals("Id")) {
-				id = reader.nextInt();
-			} else if (name.equals("Duration")) {
-				duration.setValue(reader.nextInt());
-			} else {
-				reader.skipValue();
-			}
-		}
-		reader.endObject();
+		this.readFromJson(reader);
 	}
 
-	public PotionEffect(TreeNodeCollection<TreeNode> parentIn) {
+	public PotionEffect(TreeNodeCollection<JsonSerializableTreeNode> parentIn) {
 		parent = parentIn;
 		inputField.setBorder(BorderFactory.createLineBorder(Color.black));
 		inputField.setText(String.valueOf(id));
@@ -65,6 +54,7 @@ public class PotionEffect implements TreeNode, UIComponentsProvider, JsonSeriali
 				try {
 					int v = Integer.parseInt(inputField.getText());
 					id = v;
+					PresetParser.get().tree.updateUI();
 				}
 				catch (NumberFormatException exception) {}
 			}
@@ -145,5 +135,26 @@ public class PotionEffect implements TreeNode, UIComponentsProvider, JsonSeriali
 	@Override
 	public String toString() {
 		return "Id:"+id;
+	}
+
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		reader.beginObject();
+		while (reader.hasNext()) {
+			String name = reader.nextName();
+			if (name.equals("Id")) {
+				id = reader.nextInt();
+			} else if (name.equals("Duration")) {
+				duration.setValue(reader.nextInt());
+			} else {
+				reader.skipValue();
+			}
+		}
+		reader.endObject();
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.OBJECT;
 	}
 }

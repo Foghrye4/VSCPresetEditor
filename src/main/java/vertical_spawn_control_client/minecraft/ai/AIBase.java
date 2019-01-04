@@ -19,13 +19,14 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
+import vertical_spawn_control_client.json.SerializedJsonType;
 import vertical_spawn_control_client.minecraft.PresetParser;
-import vertical_spawn_control_client.tree.JsonSerializable;
+import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.tree.TreeLeafBase;
 import vertical_spawn_control_client.tree.TreeNodeCollection;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializable {
+public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializableTreeNode {
 
 	public final TreeNodeCollection<AIBase> parent;
 	private AIModificatorAction actionModificator = AIModificatorAction.ADD;
@@ -38,28 +39,7 @@ public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializable 
 	
 	public AIBase(TreeNodeCollection<AIBase> parentIn, JsonReader reader) throws IOException {
 		this(parentIn);
-		reader.beginObject();
-		Map<String,String> otherData = new HashMap<String,String>();
-		while (reader.hasNext()) {
-			String name = reader.nextName();
-			if(name.equals("add") || name.equals("remove")) {
-				actionModificator = AIModificatorAction.valueOf(name.toUpperCase());
-				action = AIAction.valueOf(reader.nextString().toUpperCase());
-			}
-			else {
-				if(reader.peek() == JsonToken.BOOLEAN)
-					otherData.put(name, String.valueOf(reader.nextBoolean()));
-				else
-					otherData.put(name, reader.nextString());
-			}
-		}
-		reader.endObject();
-		childs.clear();
-		for(Function<TreeNode, ? extends TreeLeafBase> leafSupplier:action.params) {
-			TreeLeafBase node = leafSupplier.apply(AIBase.this);
-			node.parseValue(otherData.get(node.name));
-			childs.add(node);
-		}
+		this.readFromJson(reader);
 	}
 	
 	public AIBase(TreeNodeCollection<AIBase> parentIn) {
@@ -84,21 +64,50 @@ public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializable 
 		});
 	}
 	
+
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		reader.beginObject();
+		Map<String,String> otherData = new HashMap<String,String>();
+		while (reader.hasNext()) {
+			String name = reader.nextName();
+			if(name.equals("add") || name.equals("remove")) {
+				actionModificator = AIModificatorAction.valueOf(name.toUpperCase());
+				action = AIAction.valueOf(reader.nextString().toUpperCase());
+			}
+			else {
+				if(reader.peek() == JsonToken.BOOLEAN)
+					otherData.put(name, String.valueOf(reader.nextBoolean()));
+				else
+					otherData.put(name, reader.nextString());
+			}
+		}
+		reader.endObject();
+		childs.clear();
+		for(Function<TreeNode, ? extends TreeLeafBase> leafSupplier:action.params) {
+			TreeLeafBase node = leafSupplier.apply(AIBase.this);
+			node.parseValue(otherData.get(node.name));
+			childs.add(node);
+		}
+	}
+	
 	public AIBase onActionSelection(AIAction newAction) {
 		action = newAction;
 		childs.clear();
 		for(Function<TreeNode, ? extends TreeLeafBase> leafSupplier:action.params) {
 			childs.add(leafSupplier.apply(AIBase.this));
 		}
-		PresetParser parser = PresetParser.get(parent);
+		PresetParser parser = PresetParser.get();
 		parser.tree.updateUI();
 		return this;
 	}
 	
 	protected void removeAll() {
-		removeButton.getParent().remove(removeButton);
-		actionSelector.getParent().remove(actionSelector);
-		actionModificatorSelector.getParent().remove(actionModificatorSelector);
+		if (removeButton.getParent() != null) {
+			removeButton.getParent().remove(removeButton);
+			actionSelector.getParent().remove(actionSelector);
+			actionModificatorSelector.getParent().remove(actionModificatorSelector);
+		}
 	}
 
 	@Override
@@ -127,8 +136,8 @@ public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializable 
 		writer.name(actionModificator.name().toLowerCase());
 		writer.value(action.name().toLowerCase());
 		for(TreeNode node:childs) {
-			if (node instanceof JsonSerializable) {
-				((JsonSerializable)node).writeTo(writer);
+			if (node instanceof JsonSerializableTreeNode) {
+				((JsonSerializableTreeNode)node).writeTo(writer);
 			}
 		}
 		writer.endObject();
@@ -176,5 +185,10 @@ public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializable 
 	@Override
 	public String toString() {
 		return actionModificator.name().toLowerCase()+":"+action.name().toLowerCase();
+	}
+
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.OBJECT;
 	}
 }

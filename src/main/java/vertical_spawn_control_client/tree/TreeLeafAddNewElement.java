@@ -8,16 +8,16 @@ import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 
-public class TreeLeafAddNewElement<E extends TreeNode> implements TreeNode, OnNodeClickActionProvider {
+public class TreeLeafAddNewElement<E extends JsonSerializableTreeNode> implements TreeNode, OnNodeClickActionProvider {
 
 	public final CollectionAccessProvider<E> parent;
 	public final String name;
-	private final Supplier<E> nodeContructor;
+	public final Supplier<E> nodeConstructor;
 
 	public TreeLeafAddNewElement(CollectionAccessProvider<E> parentIn, String nameIn, Supplier<E> nodeContructorIn) {
 		parent = parentIn;
 		name = nameIn;
-		nodeContructor = nodeContructorIn;
+		nodeConstructor = nodeContructorIn;
 	}
 
 	@Override
@@ -57,7 +57,7 @@ public class TreeLeafAddNewElement<E extends TreeNode> implements TreeNode, OnNo
 
 	@Override
 	public void onNodeClick(JTree tree, JLayeredPane panel) {
-		parent.add(parent.getChildCount()-1,nodeContructor.get());
+		parent.add(parent.getChildCount()-1,nodeConstructor.get());
 		tree.updateUI();
 	}
 

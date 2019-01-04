@@ -5,48 +5,28 @@ import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.function.Function;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLayeredPane;
 import javax.swing.JTextField;
-import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 
+import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-public class TreeNodeFloatLeaf extends TreeLeafBase {
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.minecraft.PresetParser;
+import vertical_spawn_control_client.ui.JTreeNodeTextField;
+
+public class TreeNodeFloatLeaf extends TreeLeafBase implements TreeNodeValueHolder {
 	
 	private float value;
-	JTextField inputField;
+	JTextField inputField = new JTreeNodeTextField(this);
 
 	public TreeNodeFloatLeaf(TreeNode parentIn, String nameIn, float valueIn) {
 		super(parentIn,nameIn);
-		value = valueIn;
-		inputField = new JTextField();
-    	inputField.setBorder(BorderFactory.createLineBorder(Color.black));
-    	inputField.setText(String.valueOf(value));
-    	inputField.addKeyListener(new KeyListener() {
-
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-			}
-
-			@Override
-			public void keyReleased(KeyEvent e) {
-				try {
-					float v = Float.parseFloat(inputField.getText());
-					value = v;
-				}
-				catch (NumberFormatException exception) {}
-			}
-    	});
-
+		this.setValue(valueIn);
 	}
 	
 	@Override
@@ -58,6 +38,12 @@ public class TreeNodeFloatLeaf extends TreeLeafBase {
 	public void writeTo(JsonWriter writer) throws IOException {
 		writer.name(name);
 		writer.value(value);
+	}
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		if (reader.nextName().equals(name))
+			value = (float) reader.nextDouble();
 	}
 
 	@Override
@@ -94,5 +80,22 @@ public class TreeNodeFloatLeaf extends TreeLeafBase {
 		if(string == null)
 			return;
 		value = Float.parseFloat(string);
+	}
+
+	@Override
+	public boolean accept(String text) {
+		try {
+			float v = Float.parseFloat(text);
+			value = v;
+			return true;
+		}
+		catch (NumberFormatException exception) {
+			return false;
+		}
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.NAME_VALUE_PAIR;
 	}
 }

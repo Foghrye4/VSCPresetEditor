@@ -17,37 +17,26 @@ import javax.swing.tree.TreeNode;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.tree.JsonSerializable;
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.tree.TreeNodeCollection;
-import vertical_spawn_control_client.tree.TreeNodeFloatLeaf;
 import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class Item implements TreeNode, UIComponentsProvider, JsonSerializable {
+public class Item implements JsonSerializableTreeNode, UIComponentsProvider {
 
-	public final TreeNodeCollection<TreeNode> parent;
+	public final TreeNodeCollection<JsonSerializableTreeNode> parent;
 	private String id = "minecraft:lava_bucket";
 	TreeNodeIntegerLeaf count = new TreeNodeIntegerLeaf(this, "Count", 1);
 	JTextField inputField = new JTextField();
 	JButton removeButton = new JButton("Remove");
 
-	public Item(TreeNodeCollection<TreeNode> parentIn, JsonReader reader) throws IOException {
+	public Item(TreeNodeCollection<JsonSerializableTreeNode> parentIn, JsonReader reader) throws IOException {
 		this(parentIn);
-		reader.beginObject();
-		while (reader.hasNext()) {
-			String name = reader.nextName();
-			if (name.equals("id")) {
-				id = reader.nextString();
-			} else if (name.equals("Count")) {
-				count.setValue(reader.nextInt());
-			} else {
-				reader.skipValue();
-			}
-		}
-		reader.endObject();
+		this.readFromJson(reader);
 	}
 
-	public Item(TreeNodeCollection<TreeNode> parentIn) {
+	public Item(TreeNodeCollection<JsonSerializableTreeNode> parentIn) {
 		parent = parentIn;
 		inputField.setBorder(BorderFactory.createLineBorder(Color.black));
 		inputField.setText(id);
@@ -63,6 +52,7 @@ public class Item implements TreeNode, UIComponentsProvider, JsonSerializable {
 			@Override
 			public void keyReleased(KeyEvent e) {
 				id = inputField.getText();
+				PresetParser.get().tree.updateUI();
 			}
 		});
 		removeButton.addActionListener(a -> {
@@ -137,15 +127,36 @@ public class Item implements TreeNode, UIComponentsProvider, JsonSerializable {
 		vector.add(count);
 		return vector.elements();
 	}
-	
+
 	@Override
 	public String toString() {
-		return "id:"+id;
+		return "id:" + id;
 	}
 
-	public TreeNode setId(String string) {
+	public JsonSerializableTreeNode setId(String string) {
 		id = string;
 		inputField.setText(id);
 		return this;
+	}
+
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		reader.beginObject();
+		while (reader.hasNext()) {
+			String name = reader.nextName();
+			if (name.equals("id")) {
+				id = reader.nextString();
+			} else if (name.equals("Count")) {
+				count.setValue(reader.nextInt());
+			} else {
+				reader.skipValue();
+			}
+		}
+		reader.endObject();
+	}
+
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.OBJECT;
 	}
 }

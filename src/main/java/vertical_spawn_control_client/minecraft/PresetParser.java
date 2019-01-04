@@ -1,16 +1,26 @@
 package vertical_spawn_control_client.minecraft;
 
+import java.awt.Component;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.ClipboardOwner;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Enumeration;
-import java.util.Vector;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.function.Supplier;
 
+import javax.swing.JOptionPane;
 import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -20,33 +30,56 @@ import javax.swing.tree.TreePath;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.tree.CollectionAccessProvider;
-import vertical_spawn_control_client.tree.JsonSerializable;
+import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.tree.OnNodeClickActionProvider;
-import vertical_spawn_control_client.tree.TreeLeafAddNewElement;
+import vertical_spawn_control_client.tree.TreeNodeCollection;
 import vertical_spawn_control_client.ui.MainWindow;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class PresetParser implements TreeNode, CollectionAccessProvider<TreeNode> {
+public class PresetParser extends TreeNodeCollection<SpawnLayer> implements ClipboardOwner {
 
 	private MainWindow owner;
-	public Vector<TreeNode> spawnLayers = new Vector<TreeNode>();
 	public JTree tree;
+	public Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
 	
 	public PresetParser(MainWindow ownerIn) {
+		super(null, "root", new  Supplier<SpawnLayer>() {
+
+			@Override
+			public SpawnLayer get() {
+				return new SpawnLayer(ownerIn.parser);
+			}
+			
+		});
 		owner = ownerIn;
 	}
 	
 	public JTree newTree() {
-		spawnLayers.add(new TreeLeafAddNewElement<TreeNode>(this,"<add new>", new  Supplier<TreeNode>() {
+		tree = new JTree(this);
+		tree.addKeyListener(new KeyListener() {
 
 			@Override
-			public TreeNode get() {
-				return new SpawnLayer(PresetParser.this);
+			public void keyTyped(KeyEvent e) {}
+
+			@Override
+			public void keyPressed(KeyEvent e) {}
+
+			@Override
+			public void keyReleased(KeyEvent e) {
+				JsonSerializableTreeNode node = PresetParser.this.getSelectedNode();
+				if(node == null)
+					return;
+				if(e.getModifiers() != 2) // Ctrl
+					return;
+				if(e.getKeyCode() == 67) { //c
+					PresetParser.this.copy(node);
+				}
+				
+				if(e.getKeyCode() == 86) {//v
+					PresetParser.this.paste(node);
+				}
 			}
-			
-		}));
-		tree = new JTree(this);
+		});
 		tree.addMouseListener(new MouseListener() {
 
 			@Override
@@ -89,6 +122,7 @@ public class PresetParser implements TreeNode, CollectionAccessProvider<TreeNode
 					int row = tree.getRowForPath(e.getNewLeadSelectionPath());
 					Rectangle selectedRectangle = tree.getRowBounds(row);
 					selectedRectangle.setLocation(selectedRectangle.x+selectedRectangle.width, selectedRectangle.y+selectedRectangle.height);
+					selectedRectangle.width = 200;
 					UIComponentsProvider uiProvider = (UIComponentsProvider) selected;
 					uiProvider.addComponents(owner.panel,selectedRectangle);
 				}
@@ -97,97 +131,162 @@ public class PresetParser implements TreeNode, CollectionAccessProvider<TreeNode
 		return tree;
 	}
 	
-	public JTree presetToTree(File file) {
+	public JsonSerializableTreeNode getSelectedNode() {
+		TreePath path = tree.getSelectionPath();
+		if (path == null)
+			return null;
+		Object selected = path.getLastPathComponent();
+		if (!(selected instanceof JsonSerializableTreeNode))
+			return null;
+		return (JsonSerializableTreeNode) selected;
+	}
+
+	public void paste(JsonSerializableTreeNode node) {
+		Object data = null;
 		try {
-			this.readFromJSON(file);
-			return this.newTree();
-		} catch (IOException e) {
+			data = clipboard.getData(DataFlavor.stringFlavor);
+			if(data==null)
+				return;
+			StringReader sreader = new StringReader((String)data);
+			JsonReader reader = new JsonReader(sreader);
+			switch(node.getSerializedJsonType()) {
+			case NAME_VALUE_PAIR:
+				reader.beginObject();
+				break;
+			case PRIMITIVE:
+				reader.beginObject();
+				reader.nextName();
+				break;
+			case OBJECT:
+			default:
+				break;
+			}
+			node.readFromJson(reader);
+			switch(node.getSerializedJsonType()) {
+			case PRIMITIVE:
+			case NAME_VALUE_PAIR:
+				reader.endObject();
+				break;
+			case OBJECT:
+			default:
+				break;
+			}
+		} catch (UnsupportedFlavorException | IOException e) {
 			e.printStackTrace();
 		}
-		return null;
+		this.tree.updateUI();
+	}
+
+	public void copy(JsonSerializableTreeNode node) {
+		StringWriter swriter = new StringWriter();
+		JsonWriter writer = new JsonWriter(swriter);
+		writer.setLenient(true);
+		try {
+			switch(node.getSerializedJsonType()) {
+			case NAME_VALUE_PAIR:
+				writer.beginObject();
+				break;
+			case PRIMITIVE:
+				writer.beginObject();
+				writer.name("primitive");
+				break;
+			case OBJECT:
+			default:
+				break;
+			}
+			node.writeTo(writer);
+			switch(node.getSerializedJsonType()) {
+			case PRIMITIVE:
+			case NAME_VALUE_PAIR:
+				writer.endObject();
+				break;
+			case OBJECT:
+			default:
+				break;
+			}
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		String toBuffer = swriter.toString();
+		clipboard.setContents(new Transferable() {
+			@Override
+			public DataFlavor[] getTransferDataFlavors() {
+				return new DataFlavor[] { DataFlavor.stringFlavor };
+			}
+
+			@Override
+			public boolean isDataFlavorSupported(DataFlavor flavor) {
+				return flavor.equals(DataFlavor.stringFlavor);
+			}
+
+			@Override
+			public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+				return toBuffer;
+			}
+		}, PresetParser.this);
+		clearUI();
+		this.tree.updateUI();
 	}
 	
-	private void readFromJSON(File file) throws IOException {
-		spawnLayers.clear();
-        JsonReader reader = new JsonReader(new FileReader(file));
+	public void clearUI() {
+		for(Component component:this.owner.panel.getComponents()) {
+			if(component!=tree)
+				this.owner.panel.remove(component);
+		};
+	}
+
+	public JTree presetToTree(File file) {
+		try(FileReader fileReader = new FileReader(file)) {
+			this.readFromJSON(fileReader);
+			return this.newTree();
+		} catch (IOException | IllegalStateException e) {
+    		return null;
+		}
+	}
+	
+	private void readFromJSON(FileReader fileReader) throws IOException {
+        JsonReader reader = new JsonReader(fileReader);
+        this.readFromJson(reader);
+	}
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		childs.clear();
         reader.setLenient(true);
         reader.beginArray();
 		while (reader.hasNext()) {
-			spawnLayers.add(new SpawnLayer(this, reader));
+			childs.add(new SpawnLayer(this, reader));
 		}
 		reader.endArray();
 	}
 	
 	public void saveToFile(File file) {
 		try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
-			writer.setIndent(" ");
-        	writer.beginArray();
-        	for(TreeNode spawnLayer:spawnLayers) {
-        		if(spawnLayer instanceof JsonSerializable) {
-            		((JsonSerializable)spawnLayer).writeTo(writer);
-        		}
-        	}
-        	writer.endArray();
+			this.writeTo(writer);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-
-
-	@Override
-	public TreeNode getChildAt(int childIndex) {
-		return spawnLayers.get(childIndex);
-	}
-
-	@Override
-	public int getChildCount() {
-		return spawnLayers.size();
-	}
-
-	@Override
-	public TreeNode getParent() {
-		return null;
-	}
-
-	@Override
-	public int getIndex(TreeNode node) {
-		return spawnLayers.indexOf(node);
-	}
-
-	@Override
-	public boolean getAllowsChildren() {
-		return true;
-	}
-
-	@Override
-	public boolean isLeaf() {
-		return false;
-	}
-
-	@Override
-	public Enumeration<TreeNode> children() {
-		return spawnLayers.elements();
-	}
 	
+	@Override
+	public void writeTo(JsonWriter writer) throws IOException {
+		writer.setIndent(" ");
+    	writer.beginArray();
+    	for(JsonSerializableTreeNode spawnLayer:childs) {
+       		spawnLayer.writeTo(writer);
+    	}
+    	writer.endArray();
+	}
+
 	@Override
 	public String toString() {
 		return "root";
 	}
 
 	@Override
-	public void add(int index, TreeNode node) {
-		this.spawnLayers.add(index,node);
-	}
+	public void lostOwnership(Clipboard clipboard, Transferable contents) {	}
 
-	public static PresetParser get(TreeNode parent) {
-		TreeNode parent1 = parent;
-		while (parent1 != null && !(parent1 instanceof PresetParser)) {
-			parent1 = parent1.getParent();
-		}
-		return (PresetParser) parent1;
-	}
-
-	public void remove(SpawnLayer spawnLayer) {
-		spawnLayers.remove(spawnLayer);
+	public static PresetParser get() {
+		return MainWindow.instance.parser;
 	}
 }

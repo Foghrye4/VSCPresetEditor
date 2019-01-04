@@ -17,14 +17,14 @@ import javax.swing.tree.TreeNode;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.tree.JsonSerializable;
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.tree.TreeNodeCollection;
 import vertical_spawn_control_client.tree.TreeNodeFloatLeaf;
 import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
-import vertical_spawn_control_client.tree.TreeNodeStringLeaf;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, JsonSerializable {
+public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, JsonSerializableTreeNode {
 	final Vector<TreeNode> childs = new Vector<TreeNode>();
 
 	String entityClass = "minecraft:zombie";
@@ -41,28 +41,7 @@ public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, Js
 	public EntitySpawnDefinition(TreeNodeCollection<EntitySpawnDefinition> collection, JsonReader reader)
 			throws IOException {
 		this(collection);
-		reader.beginObject();
-		while (reader.hasNext()) {
-			String name = reader.nextName();
-			if (name.equals("class")) {
-				entityClass = reader.nextString();
-			} else if (name.equals("chance")) {
-				chance.setValue((float) reader.nextDouble());
-			} else if (name.equals("group_size")) {
-				groupSize.setValue(reader.nextInt());
-			} else if (name.equals("spawn_limit")) {
-				spawnLimit.setValue(reader.nextInt());
-			} else if (name.equals("nbt")) {
-				nbt.read(reader.nextString());
-			} else if (name.equals("min_light_level")) {
-				minLightLevel.setValue(reader.nextInt());
-			} else if (name.equals("max_light_level")) {
-				maxLightLevel.setValue(reader.nextInt());
-			} else {
-				reader.skipValue();
-			}
-		}
-		reader.endObject();
+		this.readFromJson(reader);
 	}
 
 	public EntitySpawnDefinition(TreeNodeCollection<EntitySpawnDefinition> collection) {
@@ -81,12 +60,11 @@ public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, Js
 			@Override
 			public void keyReleased(KeyEvent e) {
 				entityClass = inputField.getText();
+				PresetParser.get().tree.updateUI();
 			}
 		});
 		removeButton.addActionListener(a -> {
 			parent.remove(EntitySpawnDefinition.this);
-			inputField.getParent().remove(inputField);
-			removeButton.getParent().remove(removeButton);
 		});
 		collectNodes();
 	}
@@ -164,10 +142,41 @@ public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, Js
 		writer.name("class");
 		writer.value(entityClass);
 		for (TreeNode node : childs) {
-			if (node instanceof JsonSerializable) {
-				((JsonSerializable) node).writeTo(writer);
+			if (node instanceof JsonSerializableTreeNode) {
+				((JsonSerializableTreeNode) node).writeTo(writer);
 			}
 		}
 		writer.endObject();
+	}
+
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		reader.beginObject();
+		while (reader.hasNext()) {
+			String name = reader.nextName();
+			if (name.equals("class")) {
+				entityClass = reader.nextString();
+			} else if (name.equals("chance")) {
+				chance.setValue((float) reader.nextDouble());
+			} else if (name.equals("group_size")) {
+				groupSize.setValue(reader.nextInt());
+			} else if (name.equals("spawn_limit")) {
+				spawnLimit.setValue(reader.nextInt());
+			} else if (name.equals("nbt")) {
+				nbt.read(reader.nextString());
+			} else if (name.equals("min_light_level")) {
+				minLightLevel.setValue(reader.nextInt());
+			} else if (name.equals("max_light_level")) {
+				maxLightLevel.setValue(reader.nextInt());
+			} else {
+				reader.skipValue();
+			}
+		}
+		reader.endObject();
+	}
+	
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.OBJECT;
 	}
 }

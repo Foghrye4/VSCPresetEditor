@@ -1,50 +1,27 @@
 package vertical_spawn_control_client.tree;
 
-import java.awt.Color;
 import java.awt.Rectangle;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.IOException;
-import java.util.Enumeration;
-import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-import javax.swing.BorderFactory;
 import javax.swing.JLayeredPane;
 import javax.swing.JTextField;
-import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 
+import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-public class TreeNodeStringLeaf extends TreeLeafBase {
+import vertical_spawn_control_client.json.SerializedJsonType;
+import vertical_spawn_control_client.ui.JTreeNodeTextField;
+
+public class TreeNodeStringLeaf extends TreeLeafBase implements TreeNodeValueHolder {
 	
 	private String value;
-	JTextField inputField;
+	JTextField inputField = new JTreeNodeTextField(this);
 
 	public TreeNodeStringLeaf(TreeNode parentIn, String nameIn, String valueIn) {
 		super(parentIn,nameIn);
-		value = valueIn;
-		inputField = new JTextField();
-    	inputField.setBorder(BorderFactory.createLineBorder(Color.black));
-    	inputField.setText(value);
-    	inputField.addKeyListener(new KeyListener() {
-
-			@Override
-			public void keyTyped(KeyEvent e) {
-			}
-
-			@Override
-			public void keyPressed(KeyEvent e) {
-			}
-
-			@Override
-			public void keyReleased(KeyEvent e) {
-				value = inputField.getText();
-			}
-    	});
-
+		setValue(valueIn);
 	}
 	
 	@Override
@@ -57,6 +34,12 @@ public class TreeNodeStringLeaf extends TreeLeafBase {
 	public void writeTo(JsonWriter writer) throws IOException {
 		writer.name(name);
 		writer.value(value);
+	}
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		if (reader.nextName().equals(name))
+			value = reader.nextString();
 	}
 
 	@Override
@@ -93,5 +76,16 @@ public class TreeNodeStringLeaf extends TreeLeafBase {
 		if(string == null)
 			return;
 		value = string;
+	}
+
+	@Override
+	public boolean accept(String text) {
+		value = text;
+		return true;
+	}
+
+	@Override
+	public SerializedJsonType getSerializedJsonType() {
+		return SerializedJsonType.NAME_VALUE_PAIR;
 	}
 }
