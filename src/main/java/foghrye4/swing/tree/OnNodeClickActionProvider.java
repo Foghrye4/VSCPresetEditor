@@ -1,4 +1,4 @@
-package vertical_spawn_control_client.tree;
+package foghrye4.swing.tree;
 
 import javax.swing.JLayeredPane;
 import javax.swing.JTree;

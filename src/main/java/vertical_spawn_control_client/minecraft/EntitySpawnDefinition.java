@@ -17,25 +17,27 @@ import javax.swing.tree.TreeNode;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
+import foghrye4.swing.tree.JsonSerializableTreeNode;
+import foghrye4.swing.tree.TreeNodeCollection;
+import foghrye4.swing.tree.TreeNodeFloatLeaf;
+import foghrye4.swing.tree.TreeNodeIntegerLeaf;
+import foghrye4.swing.tree.TreeNodeValueHolder;
 import vertical_spawn_control_client.json.SerializedJsonType;
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
-import vertical_spawn_control_client.tree.TreeNodeCollection;
-import vertical_spawn_control_client.tree.TreeNodeFloatLeaf;
-import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
+import vertical_spawn_control_client.ui.JTreeNodeTextField;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, JsonSerializableTreeNode {
+public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, JsonSerializableTreeNode, TreeNodeValueHolder {
 	final Vector<TreeNode> childs = new Vector<TreeNode>();
 
 	String entityClass = "minecraft:zombie";
 	public final TreeNodeFloatLeaf chance = new TreeNodeFloatLeaf(this, "chance", 1.0f);
 	public final TreeNodeIntegerLeaf groupSize = new TreeNodeIntegerLeaf(this, "group_size", 4);
 	public final TreeNodeIntegerLeaf spawnLimit = new TreeNodeIntegerLeaf(this, "spawn_limit", 4);
-	public final NBT nbt = new NBT(this);
+	public final EntityNBT nbt = new EntityNBT(this);
 	public final TreeNodeIntegerLeaf minLightLevel = new TreeNodeIntegerLeaf(this, "min_light_level", 0);
 	public final TreeNodeIntegerLeaf maxLightLevel = new TreeNodeIntegerLeaf(this, "max_light_level", 16);
 	private final TreeNodeCollection<EntitySpawnDefinition> parent;
-	JTextField inputField = new JTextField();
+	JTextField inputField = new JTreeNodeTextField(this);
 	JButton removeButton = new JButton("Remove");
 
 	public EntitySpawnDefinition(TreeNodeCollection<EntitySpawnDefinition> collection, JsonReader reader)
@@ -65,6 +67,7 @@ public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, Js
 		});
 		removeButton.addActionListener(a -> {
 			parent.remove(EntitySpawnDefinition.this);
+			PresetParser.get().clearUI();
 		});
 		collectNodes();
 	}
@@ -122,6 +125,7 @@ public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, Js
 	public void removeComponents(JLayeredPane panel) {
 		panel.remove(inputField);
 		panel.remove(removeButton);
+		panel.updateUI();
 		panel.repaint();
 		panel.getParent().repaint();
 	}
@@ -156,6 +160,7 @@ public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, Js
 			String name = reader.nextName();
 			if (name.equals("class")) {
 				entityClass = reader.nextString();
+				inputField.setText(entityClass);
 			} else if (name.equals("chance")) {
 				chance.setValue((float) reader.nextDouble());
 			} else if (name.equals("group_size")) {
@@ -178,5 +183,14 @@ public class EntitySpawnDefinition implements TreeNode, UIComponentsProvider, Js
 	@Override
 	public SerializedJsonType getSerializedJsonType() {
 		return SerializedJsonType.OBJECT;
+	}
+
+	@Override
+	public boolean accept(String text) {
+		String[] pair = text.split(":", 2);
+		if (pair.length != 2 || pair[0].length() == 0 || pair[1].length() == 0)
+			return false;
+		entityClass = text;
+		return true;
 	}
 }

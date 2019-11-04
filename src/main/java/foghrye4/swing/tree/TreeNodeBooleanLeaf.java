@@ -1,4 +1,4 @@
-package vertical_spawn_control_client.tree;
+package foghrye4.swing.tree;
 
 import java.awt.Color;
 import java.awt.Rectangle;
@@ -36,7 +36,7 @@ public class TreeNodeBooleanLeaf extends TreeLeafBase {
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				value = inputField.isSelected();
-				PresetParser.get().tree.updateUI();
+				PresetParser.updateUI();
 			}});
 	}
 

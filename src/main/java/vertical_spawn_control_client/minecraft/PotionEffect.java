@@ -17,10 +17,10 @@ import javax.swing.tree.TreeNode;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
+import foghrye4.swing.tree.JsonSerializableTreeNode;
+import foghrye4.swing.tree.TreeNodeCollection;
+import foghrye4.swing.tree.TreeNodeIntegerLeaf;
 import vertical_spawn_control_client.json.SerializedJsonType;
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
-import vertical_spawn_control_client.tree.TreeNodeCollection;
-import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
 public class PotionEffect implements JsonSerializableTreeNode, UIComponentsProvider  {
@@ -61,8 +61,7 @@ public class PotionEffect implements JsonSerializableTreeNode, UIComponentsProvi
 		});
 		removeButton.addActionListener(a -> {
 			parent.remove(PotionEffect.this);
-			inputField.getParent().remove(inputField);
-			removeButton.getParent().remove(removeButton);
+			PresetParser.get().clearUI();
 		});
 	}
 

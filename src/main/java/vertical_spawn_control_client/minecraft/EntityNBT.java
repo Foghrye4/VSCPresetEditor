@@ -12,12 +12,13 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import com.google.gson.stream.MalformedJsonException;
 
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
-import vertical_spawn_control_client.tree.TreeNodeCollection;
-import vertical_spawn_control_client.tree.TreeNodeMutableNBTStringLeaf;
+import foghrye4.swing.tree.JsonSerializableTreeNode;
+import foghrye4.swing.tree.TreeLeafAddNewElement;
+import foghrye4.swing.tree.TreeNodeCollection;
+import foghrye4.swing.tree.TreeNodeMutableNBTStringLeaf;
+import foghrye4.swing.tree.TreeNodeRemovableNBTStringLeaf;
 
-public class NBT extends TreeNodeCollection<JsonSerializableTreeNode>  {
-	public final TreeNode parent;
+public class EntityNBT extends TreeNodeCollection<JsonSerializableTreeNode>   {
 	public final TreeNodeCollection<JsonSerializableTreeNode> attributes = new TreeNodeCollection<JsonSerializableTreeNode>(this, "Attributes",new Supplier<JsonSerializableTreeNode>() {
 		@Override
 		public JsonSerializableTreeNode get() {
@@ -43,15 +44,20 @@ public class NBT extends TreeNodeCollection<JsonSerializableTreeNode>  {
 		}
 	});
 	public final ForgeData forgeData = new ForgeData(this);
+	private TreeLeafAddNewElement<JsonSerializableTreeNode> deathLootTableCreator;
 	
-	public NBT(EntitySpawnDefinition parentIn) {
+	public EntityNBT(EntitySpawnDefinition parentIn) {
 		super(parentIn, "nbt", new Supplier<JsonSerializableTreeNode>() {
 			@Override
 			public JsonSerializableTreeNode get() {
 				return new TreeNodeMutableNBTStringLeaf(parentIn.nbt, "Health", "20.0");
 			}
 		});
-		parent = parentIn;
+		deathLootTableCreator = new TreeLeafAddNewElement<JsonSerializableTreeNode>(this, "<add death loot table>", ()-> {
+			return new TreeNodeRemovableNBTStringLeaf(parentIn.nbt, "DeathLootTable", "vertical_spawn_control:"+parentIn.entityClass.replace("minecraft:", "").replace(":", "_"),deathLootTableCreator);
+		});
+		deathLootTableCreator.singleUse = true;
+		nodeSuppliers.add(deathLootTableCreator);
 		this.collectNodes();
 	}
 
@@ -133,6 +139,9 @@ public class NBT extends TreeNodeCollection<JsonSerializableTreeNode>  {
 					reader.endArray();
 				} else if (name.equals("ForgeData")) {
 					forgeData.readFromJson(reader);
+				} else if (name.equals("DeathLootTable")) {
+					childs.add(childs.size() - 1, new TreeNodeRemovableNBTStringLeaf(this, name, reader.nextString(), deathLootTableCreator));
+					this.nodeSuppliers.remove(deathLootTableCreator);
 				} else {
 					childs.add(childs.size() - 1, new TreeNodeMutableNBTStringLeaf(this, name, reader.nextString()));
 				}

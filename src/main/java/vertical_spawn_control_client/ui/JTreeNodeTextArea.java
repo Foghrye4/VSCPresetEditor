@@ -4,12 +4,13 @@ import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import foghrye4.swing.tree.TreeNodeValueHolder;
 import vertical_spawn_control_client.minecraft.PresetParser;
 
-public class JTreeNodeTextField extends JTextField {
+public class JTreeNodeTextArea extends JTextArea {
 	
 	/**
 	 * 
@@ -17,7 +18,7 @@ public class JTreeNodeTextField extends JTextField {
 	private static final long serialVersionUID = 8376685979422110806L;
 	private TreeNodeValueHolder owner;
 
-	public JTreeNodeTextField(TreeNodeValueHolder ownerIn) {
+	public JTreeNodeTextArea(TreeNodeValueHolder ownerIn) {
 		owner = ownerIn;
 		addKeyListener(new KeyListener() {
 
@@ -29,15 +30,15 @@ public class JTreeNodeTextField extends JTextField {
 
 			@Override
 			public void keyReleased(KeyEvent e) {
-				if(!JTreeNodeTextField.this.owner.accept(JTreeNodeTextField.this.getText())) {
-					JTreeNodeTextField.this.setBackground(Color.YELLOW);
+				if(!JTreeNodeTextArea.this.owner.accept(JTreeNodeTextArea.this.getText())) {
+					JTreeNodeTextArea.this.setBackground(Color.YELLOW);
 					return;
 				}
-				JTreeNodeTextField.this.setBackground(Color.WHITE);
+				JTreeNodeTextArea.this.setBackground(Color.WHITE);
 				PresetParser.get().tree.updateUI();
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					if (JTreeNodeTextField.this.owner instanceof UIComponentsProvider) {
-						UIComponentsProvider uiProvider = (UIComponentsProvider) JTreeNodeTextField.this.owner;
+					if (JTreeNodeTextArea.this.owner instanceof UIComponentsProvider) {
+						UIComponentsProvider uiProvider = (UIComponentsProvider) JTreeNodeTextArea.this.owner;
 						uiProvider.removeComponents(MainWindow.instance.panel);
 					}
 				}

@@ -1,4 +1,4 @@
-package vertical_spawn_control_client.tree;
+package foghrye4.swing.tree;
 
 import java.io.IOException;
 import java.util.Enumeration;
@@ -18,36 +18,37 @@ import vertical_spawn_control_client.ui.MainWindow;
 
 public class TreeNodeCollection<E extends JsonSerializableTreeNode> implements CollectionAccessProvider<E>, JsonSerializableTreeNode {
 	
-	protected Vector<JsonSerializableTreeNode> childs = new Vector<JsonSerializableTreeNode>();
+	protected final Vector<JsonSerializableTreeNode> childs = new Vector<JsonSerializableTreeNode>();
+	protected final Vector<TreeLeafAddNewElement<JsonSerializableTreeNode>> nodeSuppliers = new Vector<TreeLeafAddNewElement<JsonSerializableTreeNode>>();
 	TreeNode parent;
 	final String name;
-	private final TreeLeafAddNewElement<E> nodeCreator;
 
-	public TreeNodeCollection(TreeNode parentIn, String nameIn, Supplier<E> supplier) {
+	public TreeNodeCollection(TreeNode parentIn, String nameIn) {
 		parent = parentIn;
 		name = nameIn;
-		nodeCreator = new TreeLeafAddNewElement<E>(this, "<add new>", supplier);
 	}
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public TreeNodeCollection(TreeNode parentIn, String nameIn, Supplier<E> supplier) {
+		this(parentIn,nameIn);
+		nodeSuppliers.add(new TreeLeafAddNewElement(this, "<add new>", supplier));
+	}
+	
+	@Override
 	public void add(E node) {
 		childs.add(node);
 	}
 	
 	@Override
-	public void add(int index, E node) {
-		childs.add(index, node);
-	}
-	
-	@Override
 	public TreeNode getChildAt(int childIndex) {
-		if(childIndex == childs.size())
-			return nodeCreator;
+		if(childIndex >= childs.size())
+			return nodeSuppliers.get(childIndex-childs.size());
 		return childs.elementAt(childIndex);
 	}
 
 	@Override
 	public int getChildCount() {
-		return childs.size()+1;
+		return childs.size()+nodeSuppliers.size();
 	}
 
 	@Override
@@ -57,9 +58,10 @@ public class TreeNodeCollection<E extends JsonSerializableTreeNode> implements C
 
 	@Override
 	public int getIndex(TreeNode node) {
-		if(node==nodeCreator)
-			return childs.size();
-		return childs.indexOf(node);
+		int index = childs.indexOf(node);
+		if(index == -1)
+			return nodeSuppliers.indexOf(node);
+		return index;
 	}
 
 	@Override
@@ -76,7 +78,7 @@ public class TreeNodeCollection<E extends JsonSerializableTreeNode> implements C
 	public Enumeration<TreeNode> children() {
 		Vector<TreeNode> childs1 = new Vector<TreeNode>();
 		childs1.addAll(childs);
-		childs1.add(nodeCreator);
+		childs1.addAll(nodeSuppliers);
 		return childs1.elements();
 	}
 	
@@ -101,7 +103,7 @@ public class TreeNodeCollection<E extends JsonSerializableTreeNode> implements C
 			return;
 		reader.beginArray(); 
 		while(reader.hasNext()){
-			JsonSerializableTreeNode node = nodeCreator.nodeConstructor.get();
+			JsonSerializableTreeNode node = nodeSuppliers.get(0).nodeConstructor.get();
 			node.readFromJson(reader);
 			childs.add(node);
 		}
@@ -111,9 +113,8 @@ public class TreeNodeCollection<E extends JsonSerializableTreeNode> implements C
 	public void remove(E node) {
 		childs.remove(node);
 		PresetParser parser = MainWindow.instance.parser;
-		JTree tree = parser.tree;
 		parser.clearUI();
-		tree.updateUI();
+		PresetParser.updateUI();
 	}
 	
 	public void clear() {
@@ -123,5 +124,10 @@ public class TreeNodeCollection<E extends JsonSerializableTreeNode> implements C
 	@Override
 	public SerializedJsonType getSerializedJsonType() {
 		return SerializedJsonType.NAME_VALUE_PAIR;
+	}
+
+	@Override
+	public Vector<TreeLeafAddNewElement<JsonSerializableTreeNode>> getNodeSuppliers() {
+		return this.nodeSuppliers;
 	}
 }

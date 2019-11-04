@@ -20,30 +20,28 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.function.Supplier;
 
-import javax.swing.JOptionPane;
 import javax.swing.JTree;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
-import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
-import vertical_spawn_control_client.tree.OnNodeClickActionProvider;
-import vertical_spawn_control_client.tree.TreeNodeCollection;
+import foghrye4.swing.tree.JsonSerializableTreeNode;
+import foghrye4.swing.tree.OnNodeClickActionProvider;
+import foghrye4.swing.tree.TreeNodeCollection;
 import vertical_spawn_control_client.ui.MainWindow;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class PresetParser extends TreeNodeCollection<SpawnLayer> implements ClipboardOwner {
+public class PresetParser extends TreeNodeCollection<JsonSerializableTreeNode> implements ClipboardOwner {
 
 	private MainWindow owner;
 	public JTree tree;
 	public Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
 	
 	public PresetParser(MainWindow ownerIn) {
-		super(null, "root", new  Supplier<SpawnLayer>() {
+		super(null, "root", new  Supplier<JsonSerializableTreeNode>() {
 
 			@Override
 			public SpawnLayer get() {
@@ -53,6 +51,12 @@ public class PresetParser extends TreeNodeCollection<SpawnLayer> implements Clip
 		});
 		owner = ownerIn;
 	}
+	
+	public PresetParser(MainWindow ownerIn, Supplier<JsonSerializableTreeNode> supplier) {
+		super(null, "root", supplier);
+		owner = ownerIn;
+	}
+
 	
 	public JTree newTree() {
 		tree = new JTree(this);
@@ -127,7 +131,7 @@ public class PresetParser extends TreeNodeCollection<SpawnLayer> implements Clip
 					uiProvider.addComponents(owner.panel,selectedRectangle);
 				}
 			}});
-		
+		clearUI();
 		return tree;
 	}
 	
@@ -240,6 +244,7 @@ public class PresetParser extends TreeNodeCollection<SpawnLayer> implements Clip
 			this.readFromJSON(fileReader);
 			return this.newTree();
 		} catch (IOException | IllegalStateException e) {
+			e.printStackTrace();
     		return null;
 		}
 	}
@@ -288,5 +293,11 @@ public class PresetParser extends TreeNodeCollection<SpawnLayer> implements Clip
 
 	public static PresetParser get() {
 		return MainWindow.instance.parser;
+	}
+
+	public static void updateUI() {
+		if (MainWindow.instance.parser.tree != null) {
+			MainWindow.instance.parser.tree.updateUI();
+		}
 	}
 }

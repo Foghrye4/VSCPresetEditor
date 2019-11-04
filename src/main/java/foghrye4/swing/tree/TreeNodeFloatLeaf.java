@@ -1,4 +1,4 @@
-package vertical_spawn_control_client.tree;
+package foghrye4.swing.tree;
 
 import java.awt.Color;
 import java.awt.Rectangle;

@@ -19,32 +19,44 @@ import com.google.gson.stream.JsonWriter;
 
 import foghrye4.swing.tree.JsonSerializableTreeNode;
 import foghrye4.swing.tree.TreeNodeCollection;
+import foghrye4.swing.tree.TreeNodeFloatLeaf;
 import foghrye4.swing.tree.TreeNodeIntegerLeaf;
-import foghrye4.swing.tree.TreeNodeStringLeaf;
-import foghrye4.swing.tree.TreeNodeValueHolder;
 import vertical_spawn_control_client.json.SerializedJsonType;
-import vertical_spawn_control_client.ui.JTreeNodeTextField;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class Item implements JsonSerializableTreeNode, UIComponentsProvider, TreeNodeValueHolder {
+public class Enchantment implements UIComponentsProvider, JsonSerializableTreeNode {
 
 	public final TreeNodeCollection<JsonSerializableTreeNode> parent;
-	final Vector<TreeNode> childs = new Vector<TreeNode>();
-	private String id = "minecraft:lava_bucket";
-	TreeNodeIntegerLeaf count = new TreeNodeIntegerLeaf(this, "Count", 1);
-	ItemNBT nbt = new ItemNBT(this);
-	JTextField inputField = new JTreeNodeTextField(this);
+	TreeNodeIntegerLeaf enchantmentId = new TreeNodeIntegerLeaf(this, "id", 4);
+	TreeNodeIntegerLeaf base = new TreeNodeIntegerLeaf(this, "lvl", 10);
+	JTextField inputField = new JTextField();
 	JButton removeButton = new JButton("Remove");
 
-	public Item(TreeNodeCollection<JsonSerializableTreeNode> parentIn, JsonReader reader) throws IOException {
+	public Enchantment(TreeNodeCollection<JsonSerializableTreeNode> parentIn, JsonReader reader) throws IOException {
 		this(parentIn);
 		this.readFromJson(reader);
 	}
+	
+	@Override
+	public void readFromJson(JsonReader reader) throws IOException {
+		reader.beginObject();
+		while (reader.hasNext()) {
+			String name = reader.nextName();
+			if (name.equals("id")) {
+				enchantmentId.setValue(reader.nextInt());
+			} else if (name.equals("lvl")) {
+				base.setValue(reader.nextInt());
+			} else {
+				reader.skipValue();
+			}
+		}
+		reader.endObject();
+	}
 
-	public Item(TreeNodeCollection<JsonSerializableTreeNode> parentIn) {
+	public Enchantment(TreeNodeCollection<JsonSerializableTreeNode> parentIn) {
 		parent = parentIn;
 		inputField.setBorder(BorderFactory.createLineBorder(Color.black));
-		inputField.setText(id);
+		inputField.setText(String.valueOf(enchantmentId));
 		inputField.addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent e) {
@@ -56,20 +68,14 @@ public class Item implements JsonSerializableTreeNode, UIComponentsProvider, Tre
 
 			@Override
 			public void keyReleased(KeyEvent e) {
-				id = inputField.getText();
+				enchantmentId.setValue(Integer.parseInt(inputField.getText()));
 				PresetParser.get().tree.updateUI();
 			}
 		});
 		removeButton.addActionListener(a -> {
-			parent.remove(Item.this);
+			parent.remove(Enchantment.this);
 			PresetParser.get().clearUI();
 		});
-		collectNodes();
-	}
-	
-	private void collectNodes() {
-		childs.addElement(count);
-		childs.addElement(nbt);
 	}
 
 	@Override
@@ -93,21 +99,19 @@ public class Item implements JsonSerializableTreeNode, UIComponentsProvider, Tre
 	@Override
 	public void writeTo(JsonWriter writer) throws IOException {
 		writer.beginObject();
-		writer.name("id");
-		writer.value(id);
-		count.writeTo(writer);
-		nbt.writeTo(writer);
+		enchantmentId.writeTo(writer);
+		base.writeTo(writer);
 		writer.endObject();
 	}
 
 	@Override
 	public TreeNode getChildAt(int childIndex) {
-		return childs.elementAt(childIndex);
+		return base;
 	}
 
 	@Override
 	public int getChildCount() {
-		return childs.size();
+		return 1;
 	}
 
 	@Override
@@ -117,7 +121,9 @@ public class Item implements JsonSerializableTreeNode, UIComponentsProvider, Tre
 
 	@Override
 	public int getIndex(TreeNode node) {
-		return childs.indexOf(node);
+		if (node == base)
+			return 1;
+		return -1;
 	}
 
 	@Override
@@ -132,49 +138,18 @@ public class Item implements JsonSerializableTreeNode, UIComponentsProvider, Tre
 
 	@Override
 	public Enumeration<TreeNode> children() {
-		return childs.elements();
+		Vector<TreeNode> vector = new Vector<TreeNode>();
+		vector.add(base);
+		return vector.elements();
 	}
-
+	
 	@Override
 	public String toString() {
-		return "id:" + id;
+		return this.enchantmentId.toString();
 	}
-
-	public JsonSerializableTreeNode setId(String string) {
-		id = string;
-		inputField.setText(id);
-		return this;
-	}
-
-	@Override
-	public void readFromJson(JsonReader reader) throws IOException {
-		reader.beginObject();
-		while (reader.hasNext()) {
-			String name = reader.nextName();
-			if (name.equals("id")) {
-				id = reader.nextString();
-			} else if (name.equals("Count")) {
-				count.setValue(reader.nextInt());
-			} else if (name.equals("tag")) {
-				nbt.readFromJson(reader);
-			} else {
-				reader.skipValue();
-			}
-		}
-		reader.endObject();
-	}
-
+	
 	@Override
 	public SerializedJsonType getSerializedJsonType() {
 		return SerializedJsonType.OBJECT;
-	}
-
-	@Override
-	public boolean accept(String text) {
-		String[] pair = text.split(":", 2);
-		if (pair.length != 2 || pair[0].length() == 0 || pair[1].length() == 0)
-			return false;
-		id = text;
-		return true;
 	}
 }

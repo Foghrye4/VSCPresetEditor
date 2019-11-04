@@ -1,6 +1,8 @@
 package vertical_spawn_control_client.minecraft.ai;
 
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.IOException;
@@ -19,18 +21,18 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
+import foghrye4.swing.tree.JsonSerializableTreeNode;
+import foghrye4.swing.tree.TreeLeafBase;
+import foghrye4.swing.tree.TreeNodeCollection;
 import vertical_spawn_control_client.json.SerializedJsonType;
 import vertical_spawn_control_client.minecraft.PresetParser;
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
-import vertical_spawn_control_client.tree.TreeLeafBase;
-import vertical_spawn_control_client.tree.TreeNodeCollection;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
 public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializableTreeNode {
 
 	public final TreeNodeCollection<AIBase> parent;
 	private AIModificatorAction actionModificator = AIModificatorAction.ADD;
-	private AIAction action = AIAction.NEAREST_ATTACKABLE_TARGET;	
+	private AIAction action = AIAction.ATTACK_MELEE_FIXED_DAMAGE;	
 	
 	JComboBox<String> actionModificatorSelector = new JComboBox<String>(AIModificatorAction.toArrayOfString());
 	JComboBox<String> actionSelector = new JComboBox<String>(AIAction.toArrayOfString());
@@ -50,17 +52,30 @@ public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializableT
 				AIBase.this.onActionSelection(AIAction.valueOf(((String)actionSelector.getSelectedItem()).toUpperCase()));
 			}
 		});
+		actionSelector.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				AIBase.this.onActionSelection(AIAction.valueOf(((String)actionSelector.getSelectedItem()).toUpperCase()));
+			}
+		});
 		
 		actionModificatorSelector.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
-				actionModificator = AIModificatorAction.valueOf(((String)actionModificatorSelector.getSelectedItem()).toUpperCase());
+				AIBase.this.onModificatorSelection(AIModificatorAction.valueOf(((String)actionModificatorSelector.getSelectedItem()).toUpperCase()));
 			}
 		});
+		actionModificatorSelector.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				AIBase.this.onModificatorSelection(AIModificatorAction.valueOf(((String)actionModificatorSelector.getSelectedItem()).toUpperCase()));
+			}});
 
 		removeButton.addActionListener(a -> {
 			parent.remove(AIBase.this);
-			AIBase.this.removeAll();
+			PresetParser.get().clearUI();
 		});
 	}
 	
@@ -93,6 +108,17 @@ public class AIBase implements TreeNode, UIComponentsProvider, JsonSerializableT
 	
 	public AIBase onActionSelection(AIAction newAction) {
 		action = newAction;
+		childs.clear();
+		for(Function<TreeNode, ? extends TreeLeafBase> leafSupplier:action.params) {
+			childs.add(leafSupplier.apply(AIBase.this));
+		}
+		PresetParser parser = PresetParser.get();
+		parser.tree.updateUI();
+		return this;
+	}
+	
+	public AIBase onModificatorSelection(AIModificatorAction newAIModificatorAction) {
+		actionModificator = newAIModificatorAction;
 		childs.clear();
 		for(Function<TreeNode, ? extends TreeLeafBase> leafSupplier:action.params) {
 			childs.add(leafSupplier.apply(AIBase.this));

@@ -10,11 +10,11 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 
+import foghrye4.swing.tree.JsonSerializableTreeNode;
+import foghrye4.swing.tree.TreeNodeCollection;
 import vertical_spawn_control_client.json.SerializedJsonType;
 import vertical_spawn_control_client.minecraft.ai.AIAction;
 import vertical_spawn_control_client.minecraft.ai.AIBase;
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
-import vertical_spawn_control_client.tree.TreeNodeCollection;
 
 public class ForgeData implements JsonSerializableTreeNode {
 	

@@ -14,14 +14,14 @@ import javax.swing.tree.TreeNode;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
+import foghrye4.swing.tree.JsonSerializableTreeNode;
+import foghrye4.swing.tree.TreeNodeBooleanLeaf;
+import foghrye4.swing.tree.TreeNodeCollection;
+import foghrye4.swing.tree.TreeNodeIntegerLeaf;
+import foghrye4.swing.tree.TreeNodeMutablePrimitiveStringLeaf;
+import foghrye4.swing.tree.TreeNodeStringLeaf;
+import foghrye4.swing.tree.TreeNodeValueHolder;
 import vertical_spawn_control_client.json.SerializedJsonType;
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
-import vertical_spawn_control_client.tree.TreeNodeBooleanLeaf;
-import vertical_spawn_control_client.tree.TreeNodeCollection;
-import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
-import vertical_spawn_control_client.tree.TreeNodeMutablePrimitiveStringLeaf;
-import vertical_spawn_control_client.tree.TreeNodeStringLeaf;
-import vertical_spawn_control_client.tree.TreeNodeValueHolder;
 import vertical_spawn_control_client.ui.JTreeNodeTextField;
 import vertical_spawn_control_client.ui.MainWindow;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
@@ -31,12 +31,14 @@ public class SpawnLayer implements JsonSerializableTreeNode, UIComponentsProvide
 	private final Vector<TreeNode> childs = new Vector<TreeNode>();
 	private String name = "New area";
 	private final TreeNodeStringLeaf comment = new TreeNodeStringLeaf(this, "Comment", "");
-	private final TreeNodeIntegerLeaf fromX = new TreeNodeIntegerLeaf(this, "fromX", -100000);
-	private final TreeNodeIntegerLeaf toX = new TreeNodeIntegerLeaf(this, "toX", 100000);
+	private final TreeNodeIntegerLeaf fromX = new TreeNodeIntegerLeaf(this, "fromX", -30000100);
+	private final TreeNodeIntegerLeaf toX = new TreeNodeIntegerLeaf(this, "toX", 30000100);
 	private final TreeNodeIntegerLeaf fromY = new TreeNodeIntegerLeaf(this, "fromY", -64);
 	private final TreeNodeIntegerLeaf toY = new TreeNodeIntegerLeaf(this, "toY", 64);
-	private final TreeNodeIntegerLeaf fromZ = new TreeNodeIntegerLeaf(this, "fromZ", -100000);
-	private final TreeNodeIntegerLeaf toZ = new TreeNodeIntegerLeaf(this, "toZ", 100000);
+	private final TreeNodeIntegerLeaf fromZ = new TreeNodeIntegerLeaf(this, "fromZ", -30000100);
+	private final TreeNodeIntegerLeaf toZ = new TreeNodeIntegerLeaf(this, "toZ", 30000100);
+	private final TreeNodeIntegerLeaf priority = new TreeNodeIntegerLeaf(this, "priority", 0);
+	private final TreeNodeIntegerLeaf playerSeekRange = new TreeNodeIntegerLeaf(this, "playerSeekRange", 24);
 	private final TreeNodeBooleanLeaf blockNaturalSpawn = new TreeNodeBooleanLeaf(this,"block_natural_spawn", true);
 	public final TreeNodeCollection<EntitySpawnDefinition> spawnList = new TreeNodeCollection<EntitySpawnDefinition>(this,"spawn_list",()-> {
 		return new EntitySpawnDefinition(SpawnLayer.this.spawnList);
@@ -59,6 +61,7 @@ public class SpawnLayer implements JsonSerializableTreeNode, UIComponentsProvide
 		inputField.setText(name);
 		removeButton.addActionListener(a -> {
 			parent.remove(SpawnLayer.this);
+			PresetParser.get().clearUI();
 		});
 		this.collectNodes();
 	}
@@ -87,6 +90,10 @@ public class SpawnLayer implements JsonSerializableTreeNode, UIComponentsProvide
 				fromZ.setValue(reader.nextInt());
 			} else if (name.equals("toZ")) {
 				toZ.setValue(reader.nextInt());
+			} else if (name.equals("priority")) {
+				priority.setValue(reader.nextInt());
+			} else if (name.equals("playerSeekRange")) {
+				playerSeekRange.setValue(reader.nextInt());
 			} else if (name.equals("name")) {
 				setDefaultName = false;
 				this.name = reader.nextString();
@@ -161,6 +168,8 @@ public class SpawnLayer implements JsonSerializableTreeNode, UIComponentsProvide
 		childs.addElement(toY);
 		childs.addElement(fromZ);
 		childs.addElement(toZ);
+		childs.addElement(priority);
+		childs.addElement(playerSeekRange);
 		childs.addElement(blockNaturalSpawn);
 		childs.addElement(this.spawnList);
 		childs.addElement(this.biomeBlackList);

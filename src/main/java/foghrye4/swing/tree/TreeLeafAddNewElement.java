@@ -1,4 +1,4 @@
-package vertical_spawn_control_client.tree;
+package foghrye4.swing.tree;
 
 import java.util.Enumeration;
 import java.util.function.Supplier;
@@ -10,14 +10,15 @@ import javax.swing.tree.TreeNode;
 
 public class TreeLeafAddNewElement<E extends JsonSerializableTreeNode> implements TreeNode, OnNodeClickActionProvider {
 
-	public final CollectionAccessProvider<E> parent;
+	public final TreeNodeCollection<E> parent;
 	public final String name;
 	public final Supplier<E> nodeConstructor;
+	public boolean singleUse = false;
 
-	public TreeLeafAddNewElement(CollectionAccessProvider<E> parentIn, String nameIn, Supplier<E> nodeContructorIn) {
-		parent = parentIn;
+	public TreeLeafAddNewElement(TreeNodeCollection<E> treeNodeCollection, String nameIn, Supplier<E> supplier) {
+		parent = treeNodeCollection;
 		name = nameIn;
-		nodeConstructor = nodeContructorIn;
+		nodeConstructor = supplier;
 	}
 
 	@Override
@@ -57,7 +58,9 @@ public class TreeLeafAddNewElement<E extends JsonSerializableTreeNode> implement
 
 	@Override
 	public void onNodeClick(JTree tree, JLayeredPane panel) {
-		parent.add(parent.getChildCount()-1,nodeConstructor.get());
+		parent.add(nodeConstructor.get());
+		if(singleUse)
+			parent.getNodeSuppliers().remove(this);
 		tree.updateUI();
 	}
 

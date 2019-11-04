@@ -1,4 +1,4 @@
-package vertical_spawn_control_client.tree;
+package foghrye4.swing.tree;
 
 import java.awt.Color;
 import java.awt.Rectangle;
@@ -19,23 +19,22 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
 import vertical_spawn_control_client.json.SerializedJsonType;
-import vertical_spawn_control_client.minecraft.NBT;
 import vertical_spawn_control_client.minecraft.PresetParser;
 import vertical_spawn_control_client.ui.JTreeNodeTextField;
 import vertical_spawn_control_client.ui.UIComponentsProvider;
 
-public class TreeNodeMutableNBTStringLeaf implements TreeNodeValueHolder, UIComponentsProvider, JsonSerializableTreeNode {
+public class TreeNodeMutablePrimitiveStringLeaf implements TreeNodeValueHolder, UIComponentsProvider, JsonSerializableTreeNode {
 
-	public final NBT parent;
-	private String nameValuePair;
+	public final TreeNodeCollection<JsonSerializableTreeNode> parent;
+	private String value;
 	JTextField inputField = new JTreeNodeTextField(this);
 	JButton removeButton = new JButton("Remove");
 
-	public TreeNodeMutableNBTStringLeaf(NBT parentIn, String nameIn, String valueIn) {
+	public TreeNodeMutablePrimitiveStringLeaf(TreeNodeCollection<JsonSerializableTreeNode> parentIn, String valueIn) {
 		parent = parentIn;
-		this.setValue(nameIn + ":"+valueIn);
+		this.setValue(valueIn);
     	removeButton.addActionListener(a-> {
-    		parent.remove(TreeNodeMutableNBTStringLeaf.this);
+    		parent.remove(TreeNodeMutablePrimitiveStringLeaf.this);
     		inputField.getParent().remove(inputField);
     		removeButton.getParent().remove(removeButton);
     	});
@@ -44,25 +43,23 @@ public class TreeNodeMutableNBTStringLeaf implements TreeNodeValueHolder, UIComp
 	
 	@Override
 	public String toString() {
-		return nameValuePair;
+		return value;
 	}
 	
 	@Override
 	public void writeTo(JsonWriter writer) throws IOException {
-		String[] pair = nameValuePair.split(":",2);
-		writer.name(pair[0]);
-		writer.value(pair[1]);
+		writer.value(value);
 	}
 	
-
 	@Override
 	public void readFromJson(JsonReader reader) throws IOException {
-		nameValuePair = reader.nextName() + ":" + reader.nextString();
+		value = reader.nextString();
 	}
-
+	
 	@Override
 	public void removeComponents(JLayeredPane panel) {
 		panel.remove(inputField);
+		panel.remove(removeButton);
 		panel.updateUI();
 		panel.repaint();
 		panel.getParent().repaint();
@@ -72,19 +69,20 @@ public class TreeNodeMutableNBTStringLeaf implements TreeNodeValueHolder, UIComp
 	public void addComponents(JLayeredPane panel, Rectangle rectangle) {
 		inputField.setBounds(rectangle);
 		panel.add(inputField, JLayeredPane.POPUP_LAYER);
+		panel.add(removeButton, JLayeredPane.POPUP_LAYER);
 		panel.getParent().repaint();
 	}
 
 	public void setValue(String valueIn) {
-		nameValuePair = valueIn;
-    	inputField.setText(nameValuePair);
+		value = valueIn;
+    	inputField.setText(value);
 	}
 	
-	public static Function<NBT, TreeNodeMutableNBTStringLeaf> getSupplier(String name, String defaultValue) {
-		return new Function<NBT, TreeNodeMutableNBTStringLeaf>() {
+	public static Function<TreeNodeCollection<JsonSerializableTreeNode>, TreeNodeMutablePrimitiveStringLeaf> getSupplier(String name, String defaultValue) {
+		return new Function<TreeNodeCollection<JsonSerializableTreeNode>, TreeNodeMutablePrimitiveStringLeaf>() {
 			@Override
-			public TreeNodeMutableNBTStringLeaf apply(NBT t) {
-				return new TreeNodeMutableNBTStringLeaf(t, name, defaultValue);
+			public TreeNodeMutablePrimitiveStringLeaf apply(TreeNodeCollection<JsonSerializableTreeNode> t) {
+				return new TreeNodeMutablePrimitiveStringLeaf(t, defaultValue);
 			}
 		};
 	}
@@ -125,16 +123,13 @@ public class TreeNodeMutableNBTStringLeaf implements TreeNodeValueHolder, UIComp
 	}
 
 	@Override
-	public boolean accept(String text) {
-		String[] pair = text.split(":", 2);
-		if (pair.length != 2 || pair[0].length() == 0 || pair[1].length() == 0)
-			return false;
-		nameValuePair = text;
+	public boolean accept(String valueIn) {
+		value = valueIn;
 		return true;
 	}
 	
 	@Override
 	public SerializedJsonType getSerializedJsonType() {
-		return SerializedJsonType.NAME_VALUE_PAIR;
+		return SerializedJsonType.PRIMITIVE;
 	}
 }

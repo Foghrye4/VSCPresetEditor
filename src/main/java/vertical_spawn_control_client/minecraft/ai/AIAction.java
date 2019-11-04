@@ -4,11 +4,11 @@ import java.util.function.Function;
 
 import javax.swing.tree.TreeNode;
 
-import vertical_spawn_control_client.tree.TreeLeafBase;
-import vertical_spawn_control_client.tree.TreeNodeBooleanLeaf;
-import vertical_spawn_control_client.tree.TreeNodeFloatLeaf;
-import vertical_spawn_control_client.tree.TreeNodeIntegerLeaf;
-import vertical_spawn_control_client.tree.TreeNodeStringLeaf;
+import foghrye4.swing.tree.TreeLeafBase;
+import foghrye4.swing.tree.TreeNodeBooleanLeaf;
+import foghrye4.swing.tree.TreeNodeFloatLeaf;
+import foghrye4.swing.tree.TreeNodeIntegerLeaf;
+import foghrye4.swing.tree.TreeNodeStringLeaf;
 
 @SuppressWarnings("unchecked")
 public enum AIAction {

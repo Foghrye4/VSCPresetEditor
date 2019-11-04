@@ -17,9 +17,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
 
+import foghrye4.swing.tree.JsonSerializableTreeNode;
 import vertical_spawn_control_client.Settings;
 import vertical_spawn_control_client.minecraft.PresetParser;
-import vertical_spawn_control_client.tree.JsonSerializableTreeNode;
 
 public class MainWindow {
 	
@@ -32,6 +32,7 @@ public class MainWindow {
 	public PresetParser parser = new PresetParser(this);
 	private JTree tree;
 	public static MainWindow instance;
+	private static final String VERSION = "0.2.0";
 	
 	public MainWindow() {
 		instance = this;
@@ -104,8 +105,8 @@ public class MainWindow {
         mntmSaveAsFile.addActionListener(e-> {
             JFileChooser chooser = new JFileChooser();
             chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-            chooser.setCurrentDirectory(settings.recentDirectory);
             chooser.setFileHidingEnabled(false);
+            chooser.setSelectedFile(new File(settings.recentDirectory,"vertical_spawn_control.json"));
             int result = chooser.showSaveDialog(null);
             if (result == JFileChooser.APPROVE_OPTION) {
             	file = chooser.getSelectedFile();
@@ -144,7 +145,7 @@ public class MainWindow {
         editMenu.add(mntmPaste);
         JMenuItem mntmAbout = new JMenuItem("About");
         mntmAbout.addActionListener(e -> {
-            JOptionPane.showMessageDialog(frame, "Vertical Spawn Control mod preset editor version 0.0.3. \nMore info about Vertical Spawn Control at \nhttps://minecraft.curseforge.com/projects/vertical-spawn-control", "About VSCEditor", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Vertical Spawn Control mod preset editor version "+VERSION+". \nMore info about Vertical Spawn Control at \nhttps://minecraft.curseforge.com/projects/vertical-spawn-control", "About VSCEditor", JOptionPane.INFORMATION_MESSAGE);
         });
         aboutMenu.add(mntmAbout);
         frame.pack();
